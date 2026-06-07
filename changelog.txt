@@ -1,0 +1,6 @@
+v0.1.0      - MAJOR: Initial release of STUNMON. This script acts as a standalone stunnel lifecycle manager for
+              Asus Merlin routers running Entware. Manages, monitors, and displays stunnel connections for one
+              or more OpenVPN client slots. stunnel wraps OpenVPN TCP traffic inside a genuine TLS session, making
+              it appear as standard HTTPS to deep packet inspection systems. Designed to operate independently of
+              VPNMON-R3 while writing a small status file that VPNMON-R3 can optionally read to show [STUN] in its
+              display and skip monitoring any slot that STUNMON owns.
