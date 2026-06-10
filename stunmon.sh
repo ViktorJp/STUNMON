@@ -333,6 +333,7 @@ stunmon_start () {
         rm -f "$PF"
         return 1
     fi
+    trimlogs
 }
 
 # Stop stunnel for slot N gracefully (SIGTERM, then SIGKILL)
@@ -363,6 +364,7 @@ stunmon_stop () {
     # Cache is only invalidated by generate_stunnel_conf when endpoint changes
     slog_info "stunmon_stop slot${SLOT}: stopped"
     update_status_file
+    trimlogs
     return 0
 }
 
@@ -373,6 +375,7 @@ stunmon_restart () {
     stunmon_stop "$SLOT"
     sleep 1
     generate_stunnel_conf "$SLOT" && record_start_time "$SLOT" && stunmon_start "$SLOT"
+    trimlogs
 }
 
 # Print status for slot N; return 0=running 1=stopped
@@ -2151,8 +2154,6 @@ main () {
             health_check_all
             trimlogs
             ;;
-
-
 
         -reset|--reset)
             if [ -n "$SLOT" ]; then
