@@ -1757,8 +1757,7 @@ setup_remove_slot () {
     [ "$(echo "$_CONF" | tr '[:upper:]' '[:lower:]')" != "y" ] && return
     stunmon_stop "$_SLOT"
     service "stop_vpnclient${_SLOT}" >/dev/null 2>&1
-    rm -f "$(slot_conf $_SLOT)" "$(slot_cert $_SLOT)" \
-          "$(slot_eplist $_SLOT)" "$(slot_epidx $_SLOT)" 2>/dev/null
+    rm -f "$(slot_conf $_SLOT)" "$(slot_cert $_SLOT)" 2>/dev/null
     rm -rf "$(slot_rundir $_SLOT)" 2>/dev/null
     STUNMON_MANAGED_SLOTS=$(echo "$STUNMON_MANAGED_SLOTS" | tr ' ' '\n' | \
         grep -v "^${_SLOT}$" | tr '\n' ' ' | sed 's/^ //;s/ $//')
