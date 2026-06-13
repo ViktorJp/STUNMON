@@ -24,6 +24,8 @@
 #
 # Prerequisites (Entware):
 #   opkg install stunnel
+#   opkg install jq
+#   opkg install screen
 #
 # Usage:
 #   stunmon.sh                                  : interactive monitoring display
@@ -1929,6 +1931,54 @@ first_run_wizard () {
         fi
     fi
 
+    if [ ! -f "/opt/sbin/screen" ]; then
+        stty_normal
+        echo ""
+        printf " Screen binary is not installed. Install via Entware/opkg now? [y/n]: "
+        read -r _INST
+        if [ "$(echo "$_INST" | tr '[:upper:]' '[:lower:]')" = "y" ]; then
+            echo ""
+            echo -e " ${CWhite}Installing Screen via opkg...${CClear}"
+            if opkg install screen 2>&1; then
+                echo ""
+                echo -e " ${CGreen}Screen binary installed successfully.${CClear}"
+                sleep 2
+            else
+                echo ""
+                echo -e " ${CRed}Installation failed. Ensure Entware is installed and router has internet access.${CClear}"
+                echo ""
+                stty_normal
+                printf " Press ENTER to continue anyway [e=Exit]: "
+                read -r _K2
+                [ "$(echo "$_K2" | tr '[:upper:]' '[:lower:]')" = "e" ] && return
+            fi
+        fi
+    fi
+    	
+    if [ ! -f "/opt/bin/jq" ]; then
+        stty_normal
+        echo ""
+        printf " JQ binary is not installed. Install via Entware/opkg now? [y/n]: "
+        read -r _INST
+        if [ "$(echo "$_INST" | tr '[:upper:]' '[:lower:]')" = "y" ]; then
+            echo ""
+            echo -e " ${CWhite}Installing JQ via opkg...${CClear}"
+            if opkg install jq 2>&1; then
+                echo ""
+                echo -e " ${CGreen}JQ binary installed successfully.${CClear}"
+                sleep 2
+            else
+                echo ""
+                echo -e " ${CRed}Installation failed. Ensure Entware is installed and router has internet access.${CClear}"
+                echo ""
+                stty_normal
+                printf " Press ENTER to continue anyway [e=Exit]: "
+                read -r _K2
+                [ "$(echo "$_K2" | tr '[:upper:]' '[:lower:]')" = "e" ] && return
+            fi
+        fi
+    fi
+    
     # Page 2: Slot number and provider
     clear
     echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 1 of 4: Slot and Provider Info                                     ${CClear}"
