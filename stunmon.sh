@@ -1513,8 +1513,10 @@ setup_slot () {
             t|T) echo ""; set_sv "$SLOT" TCP_NODELAY "$(yesno $(get_sv $SLOT TCP_NODELAY))" ;;
             p|P) echo ""; echo -e "  ${CWhite}Parsing .ssl file...${CClear}"
                if parse_ssl_conf "$SLOT"; then
+               	   echo ""
                    echo -e "  ${CGreen}local=$(get_sv $SLOT LOCAL_HOST):$(get_sv $SLOT LOCAL_PORT)  remote=$(get_sv $SLOT REMOTE_HOST):$(get_sv $SLOT REMOTE_PORT)${CClear}"
                else
+                   echo ""
                    echo -e "  ${CRed}Could not parse. Check SSL config file (option 3).${CClear}"
                fi
                sleep 2 ;;
@@ -1524,8 +1526,10 @@ setup_slot () {
                echo -e "  ${CWhite}Generating stunnel config...${CClear}"
                if generate_stunnel_conf "$SLOT"; then
                    stunmon_restart "$SLOT"
+                   echo ""
                    echo -e "  ${CGreen}Saved. Slot ${SLOT} restarted.${CClear}"
                else
+                   echo ""
                    echo -e "  ${CRed}Config generation failed. Check SSL file (3) and cert (4).${CClear}"
                fi
                sleep 2 ;;
