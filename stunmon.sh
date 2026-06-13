@@ -1,7 +1,7 @@
 #!/bin/sh
 # ============================================================================================================================
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
-# Version: 0.1.0
+# Version: 0.2.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
 # Last Updated: 2026-Jun-13
 # ============================================================================================================================
@@ -43,7 +43,7 @@ export PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
 unset LD_LIBRARY_PATH
 
 # -- Version -------------------------------------------------------------------
-Version="0.1.0"
+Version="0.2.0"
 
 # Color variables
 CBlack="\e[1;30m"
@@ -72,6 +72,7 @@ STUNMON_DIR="/jffs/addons/stunmon.d"
 STUNMON_CFG="${STUNMON_DIR}/stunmon.cfg"
 STUNMON_STATUS="${STUNMON_DIR}/stunmon.status"
 STUNMON_LOG="${STUNMON_DIR}/stunmon.log"
+STUNMON_VER="${STUNMON_DIR}/version.txt"
 CONFIGS_DIR="${STUNMON_DIR}/configs"
 RUNDIR="/tmp/stunmon"
 
@@ -1209,7 +1210,8 @@ display_main () {
         echo -en "${OPS_LABEL}"
         printf "%*s" 12 ""
         echo -e "$tzspaces$(date +"%a %b %d, %Y %H:%M:%S %Z %z") ${CClear}"
-        echo ""
+        #Display Update Notifications
+        if [ "$UpdateNotify" != "0" ]; then echo -e "$UpdateNotify\n"; else echo -e "${CClear}"; fi
 
         # Slot summary table
         if [ -z "$STUNMON_MANAGED_SLOTS" ]; then
@@ -1319,7 +1321,7 @@ pick_file () {
         echo -e "${CClear}   (c) Enter a custom path"
         echo -e "${CClear}   (e) Skip"
         echo -e "${CClear}"
-        echo -e "${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+        echo -e "${CClear} ${CDkGray}-------------------------------------------------------------------------------------${CClear}"
         echo ""
         while true; do
             printf " Select [1-%s/c/e]: " "$_TOTAL"
@@ -1346,7 +1348,7 @@ pick_file () {
         echo -e "${CClear}   Copy the file to /jffs/scripts/ then press ENTER to retry,${CClear}"
         echo -e "${CClear}   or type the full path manually.  Press 'e' to skip.${CClear}"
         echo -e "${CClear}"
-        echo -e "${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+        echo -e "${CClear} ${CDkGray}-------------------------------------------------------------------------------------${CClear}"
         echo ""
         while true; do
             stty_normal
@@ -1606,7 +1608,7 @@ setup_validate () {
     fi
 
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo -e "${InvGreen} ${CClear}"
     if [ "$OK" = "1" ]; then
         echo -e "${InvGreen} ${CClear}   ${CGreen}All Slot ${SLOT} checks passed.${CClear}"
@@ -1737,6 +1739,8 @@ setup_menu () {
 				        fi
 				      ;;
             
+              11) vupdate ;;
+              12) vuninstall ;;
             [Ee]) break ;;
             [1-5])
                 if echo "$STUNMON_MANAGED_SLOTS" | grep -qw "$_CHOICE"; then
@@ -1751,6 +1755,137 @@ setup_menu () {
     save_config
 }
 
+# vupdate is a function that provides a UI to check for script updates and allows you to install the latest version...
+vupdate() {
+	
+updatecheck # Check for the latest version from source repository
+while true; do
+  clear
+  echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON Update Utility                                                                ${CClear}"
+  echo -e "${InvGreen} ${CClear}"
+  echo -e "${InvGreen} ${CClear} This utility allows you to check, download and install updates"
+  echo -e "${InvGreen} ${CClear}${CDkGray}---------------------------------------------------------------------------------------${CClear}"
+  echo ""
+  echo -e "Current Version: ${CGreen}$Version${CClear}"
+  echo -e "Updated Version: ${CGreen}$DLversion${CClear}"
+  echo ""
+  if [ "$Version" = "$DLversion" ]
+    then
+      echo -e "You are on the latest version! Would you like to download anyways? This will overwrite${CClear}"
+      echo -e "your local copy with the current build.${CClear}"
+      if promptyn "[y/n]: "; then
+        echo ""
+        echo -e "\nDownloading STUNMON ${CGreen}v$DLversion${CClear}"
+        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
+        echo ""
+        echo -e "Download successful!${CClear}"
+        slog_info "Successfully downloaded and installed STUNMON v$DLversion"
+        echo ""
+        read -rsp $'Press any key to restart STUNMON...\n' -n1 key
+        exec /jffs/scripts/stunmon.sh
+      else
+        echo ""
+        echo ""
+        echo -e "Exiting Update Utility...${CClear}"
+        sleep 1
+        return
+      fi
+    else
+      echo -e "Score! There is a new version out there! Would you like to update?${CClear}"
+      if promptyn "[y/n]: "; then
+        echo ""
+        echo -e "\nDownloading STUNMON ${CGreen}v$DLversion${CClear}"
+        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
+        echo ""
+        echo -e "Download successful!${CClear}"
+        slog_info "Successfully downloaded and installed STUNMON v$DLversion"
+        echo ""
+        read -rsp $'Press any key to restart STUNMON...\n' -n1 key
+        exec /jffs/scripts/stunmon.sh
+      else
+        echo ""
+        echo ""
+        echo -e "Exiting Update Utility...${CClear}"
+        sleep 1
+        return
+      fi
+  fi
+done
+
+}
+
+# updatecheck is a function that downloads the latest update version file, and compares it with what's currently installed
+updatecheck() {
+
+  # Download the latest version file from the source repository
+  curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/version.txt" -o "/jffs/addons/stunmon.d/version.txt"
+
+  if [ -f $STUNMON_VER ]
+    then
+      # Read in its contents for the current version file
+      DLversion=$(cat $STUNMON_VER)
+
+      # Compare the new version with the old version and log it
+      if [ "$beta" = "1" ]; then   # Check if Dev/Beta Mode is enabled and disable notification message
+        UpdateNotify=0
+      elif [ "$DLversion" != "$Version" ]; then
+        DLversionPF=$(printf "%-8s" $DLversion)
+        versionPF=$(printf "%-8s" $Version)
+        UpdateNotify="${InvYellow} ${InvDkGray}${CWhite} Update available: v$versionPF -> v$DLversionPF                                                                    ${CClear}"
+        slog_info "A new update (v$DLversion) is available to download"
+      else
+        UpdateNotify=0
+      fi
+  fi
+}
+
+# -------------------------------------------------------------------------------------------------------------------------
+# vuninstall is a function that uninstalls and removes all traces of vpnmon-r3 from your router...
+vuninstall() {
+
+while true; do
+  clear
+  echo -e "${InvGreen} ${InvDkGray}${CWhite} Uninstall Utility                                                                    ${CClear}"
+  echo -e "${InvGreen} ${CClear}"
+  echo -e "${InvGreen} ${CClear} You are about to uninstall STUNMON! This action is irreversible."
+  echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
+  echo ""
+  echo -e "Do you wish to proceed?${CClear}"
+  if promptyn "[y/n]: "; then
+    echo ""
+    echo -e "\nAre you sure? Please type 'y' to validate you wish to proceed.${CClear}"
+      if promptyn "[y/n]: "; then
+        clear
+        #Remove and uninstall files/directories
+        rm -f -r /jffs/addons/stunmon.d
+        rm -f /jffs/scripts/stunmon.sh
+        sed -i -e '/stunmon.sh/d' /jffs/scripts/services-start
+        echo ""
+        echo -e "\nSTUNMON has been uninstalled...${CClear}"
+        echo ""
+        echo -e "The following Entware binaries remain, and must be uninstalled manually:"
+        echo -e "opkg remove stunnel"
+        echo -e "opkg remove screen"
+        echo -e "opkg remove jq"
+        echo ""
+        echo -e "Please ensure that no other scripts have dependencies on these binaries before removal."
+        echo ""
+        exit 0
+      else
+        echo ""
+        echo -e "\nExiting Uninstall Utility...${CClear}"
+        sleep 1
+        return
+      fi
+  else
+    echo ""
+    echo -e "\nExiting Uninstall Utility...${CClear}"
+    sleep 1
+    return
+  fi
+done
+}
+
 # ============================================================================================================================
 # Section 11d -- Add/remove slot helpers
 # ============================================================================================================================
@@ -1763,7 +1898,7 @@ setup_new_slot () {
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} The slot must already be configured in the router's VPN client settings with the${CClear}"
     echo -e "${InvGreen} ${CClear} provider's stunnel .ovpn file loaded.${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     
     local NEWSLOT
@@ -1812,7 +1947,7 @@ setup_remove_slot () {
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Current slots in use: ${CWhite}${STUNMON_MANAGED_SLOTS:-none}${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     printf " Slot number to remove [1-5, e=Exit]: "
     local _SLOT; _SLOT=$(getkey); printf "%s
@@ -1846,7 +1981,7 @@ setup_global () {
         echo -e "${InvGreen} ${CClear}   (2)  Health interval    : ${CWhite}${STUNMON_HEALTHINTERVAL}${CClear} seconds (display mode refresh)"
         echo -e "${InvGreen} ${CClear}   (3)  Display refresh    : ${CWhite}${STUNMON_DISPLAY_REFRESH}${CClear} seconds"
         echo -e "${InvGreen} ${CClear}"
-        echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+        echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
         echo ""
         printf " Option [1-3, e=Exit]: "
         local _G; _G=$(getkey); printf "%s
@@ -1886,7 +2021,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Copy the .ssl and .crt files to /jffs/scripts/ for easy selection.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
 
     # Check stunnel binary
     echo -e "${InvGreen} ${CClear}"
@@ -1899,7 +2034,7 @@ first_run_wizard () {
         echo -e "${InvGreen} ${CClear}   Install via    : ${CWhite}opkg install stunnel ${CDkGray}(STUNMON will install on next step)${CClear}"
     fi
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     stty_normal
     printf " Press ENTER to begin [e=Exit]: "
@@ -1986,7 +2121,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear} Which OVPN client slot is configured with your provider's stunnel .ovpn?${CClear}"
     echo -e "${InvGreen} ${CClear} ${CDkGray}(The specific .ovpn that references 'remote 127.0.0.1 PORT')${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     local SLOT PROV
     while true; do
@@ -2017,7 +2152,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   For AirVPN this file is named: ${CDkGray}AirVPN_..._SSL-443.ssl${CClear}"
     echo -e "${InvGreen} ${CClear}   Copy it to /jffs/scripts/ before continuing.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
 
     local SSLF=""
     while true; do
@@ -2055,7 +2190,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   For AirVPN this file is named: ${CYellow}stunnel.crt${CClear}"
     echo -e "${InvGreen} ${CClear}   Copy it to /jffs/scripts/ before continuing.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
 
     local CERTF=""
     while true; do
@@ -2087,7 +2222,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   ${CYellow}Examples: onedrive.live.com  outlook.live.com  www.microsoft.com${CClear}"
     echo -e "${InvGreen} ${CClear}   ${CYellow}Note: IP-level correlation still reveals the true destination.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     local SNIHOST
     stty_normal
@@ -2107,7 +2242,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   Debug level  : ${CWhite}0${CClear} (silent/production)"
     echo -e "${InvGreen} ${CClear}   TCP_NODELAY  : ${CGreen}enabled${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
     echo ""
     stty_normal
     printf " Save this configuration and start stunmon? [y/n]: "
@@ -2176,6 +2311,7 @@ main () {
     create_dirs
     find_binaries
     load_config
+    updatecheck
 
     # Parse command
     local CMD="${1:-}"
