@@ -3,6 +3,7 @@
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
 # Version: 0.1.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
+# Last Updated: 2026-Jun-12
 # ============================================================================================================================
 #
 # Description:
@@ -300,8 +301,6 @@ stunmon_start () {
     mkdir -p "$RD" 2>/dev/null
 
     # Launch stunnel in foreground mode as background job.
-    # foreground=yes means it doesn't daemonise; & returns control to script.
-    # stdout+stderr go to the stunnel log file.
     "$STUNNEL_BIN" "$CF" >> "$LF" 2>&1 &
     local BG_PID=$!
 
@@ -321,10 +320,7 @@ stunmon_start () {
 
     if stunmon_alive "$SLOT"; then
         slog_info "stunmon_start slot${SLOT}: started (PID: $BG_PID, port: ${LP})"
-        # Probe TLS session info in the background so get_tls_info can read
-        # it without blocking the display loop. Existing cache is preserved so
-        # the display shows the last known TLS version rather than "?" during
-        # the probe window. The probe overwrites the cache when it completes.
+        # Probe TLS session info in the background
         probe_tls_info "$SLOT" &
         update_status_file
         return 0
@@ -359,9 +355,7 @@ stunmon_stop () {
     fi
 
     rm -f "$PF"
-    # tls_cache preserved intentionally -- TLS parameters survive a restart
-    # and the display should show the last known value rather than "?"
-    # Cache is only invalidated by generate_stunnel_conf when endpoint changes
+    # tls_cache preserved intentionally 
     slog_info "stunmon_stop slot${SLOT}: stopped"
     update_status_file
     trimlogs
@@ -499,8 +493,7 @@ EOF
         echo "sni          = ${SNI}" >> "$CF"
     fi
 
-    # Invalidate TLS cache when a new config is generated -- the endpoint
-    # may have changed (e.g. after rotate_endpoint), so a fresh probe is needed
+    # Invalidate TLS cache when a new config is generated
     rm -f "$(slot_rundir $SLOT)/tls_cache" 2>/dev/null
     slog_info "generate_conf slot${SLOT}: wrote ${CF} (endpoint: ${RH}:${RP})"
     return 0
@@ -546,9 +539,6 @@ get_vpn_state () {
 }
 
 # Read cached TLS session info for slot N.
-# The cache is written by probe_tls_info (called from stunmon_start).
-# Returns: TLS_VERSION|CIPHER_SUITE  or  "?|?" if not yet available.
-# NEVER does blocking network I/O.
 get_tls_info () {
     local SLOT="$1"
     local CACHEF; CACHEF="$(slot_rundir $SLOT)/tls_cache"
@@ -576,8 +566,6 @@ get_tls_info () {
 }
 
 # Probe the remote stunnel server with openssl s_client and cache the TLS result.
-# Designed to be called as a BACKGROUND job from stunmon_start so it never
-# blocks the display loop. Writes to /tmp/stunmon/slotN/tls_cache on success.
 probe_tls_info () {
     local SLOT="$1"
     local RH; RH=$(get_sv "$SLOT" REMOTE_HOST)
@@ -591,8 +579,7 @@ probe_tls_info () {
     # Short wait for stunnel to fully bind before we probe
     sleep 2
 
-    # Write to a temp file to avoid BusyBox pipe-in-$() buffering issues where
-    # the subshell may not receive all bytes before the pipe closes.
+    # Write to a temp file
     rm -f "$TMPF" 2>/dev/null
     local CERTF; CERTF=$(slot_cert "$SLOT")
     local CAOPT=""
@@ -609,7 +596,6 @@ probe_tls_info () {
 
     # Format A (most reliable in OpenSSL 1.1.1):
     # "New, TLSv1.2, Cipher is ECDHE-RSA-AES256-GCM-SHA384"
-    # This line appears right after the handshake completes.
     local NEW_LINE
     NEW_LINE=$(echo "$SSL_OUT" | grep "^New,")
     if [ -n "$NEW_LINE" ]; then
@@ -649,11 +635,7 @@ probe_tls_info () {
     fi
 }
 
-
 # Get bytes transferred through the VPN tunnel interface for slot N.
-# Reads from the kernel tun interface statistics -- the same source Merlin uses
-# in its UI. Falls back to zero if the interface is not up.
-# Returns: TX_BYTES|RX_BYTES  (as raw integers)
 get_tunnel_bytes () {
     local SLOT="$1"
     local TUNIF="tun1${SLOT}"
@@ -751,10 +733,6 @@ update_status_file () {
 }
 
 # ── City name lookup (cached by egress IP) ────────────────────────────────────
-# Cache file: /tmp/stunmon/slotN/city_cache  format: EGRESS_IP|CITY_NAME
-# update_slot_city: get current egress IP via tun, compare to cache.
-# If egress IP changed (or cache missing), query ip-api.com for the city.
-# Designed to be called in the background (&) so it never blocks the display.
 update_slot_city () {
     local SLOT="$1"
     local TUNIF="tun1${SLOT}"
@@ -950,7 +928,6 @@ health_check_slot () {
 # ============================================================================================================================
 
 # Spinner is a script that provides a small indicator on the screen to show script activity
-
 spinner()
 {
   spins=$1
@@ -1302,8 +1279,6 @@ display_main () {
 PICKED_FILE=""
 
 # File picker: scans standard locations for files matching PATTERN,
-# presents a numbered list, and sets PICKED_FILE.  No timeout, no cursor drop.
-# Usage: pick_file "*.ssl" "stunnel .ssl config"; use "$PICKED_FILE"
 pick_file () {
     local PATTERN="$1" LABEL="$2"
     PICKED_FILE=""
@@ -1313,7 +1288,6 @@ pick_file () {
     > "$_PF_TMP"
 
     # Search each standard location for each space-separated sub-pattern.
-    # Use 'find' instead of shell glob expansion
     local _DIR _P
     for _DIR in /jffs/scripts \
                 /jffs/addons/stunmon.d \
@@ -1386,10 +1360,7 @@ pick_file () {
     fi
 }
 
-# Yes/No prompt -- returns 1 (yes) or 0 (no)
 # getkey: read exactly one character immediately -- no Enter needed, no echo.
-# Used for all single-character menu selections throughout setup menus.
-# Text fields (IP addresses, paths) still use inp() with regular read.
 getkey () {
     local _K=""
     local _SAVE; _SAVE=$(stty -g 2>/dev/null)
@@ -1419,7 +1390,6 @@ yesno () {
 }
 
 # inp: text prompt -- returns typed value or current on Enter.
-# Prompt goes to stderr so the captured return value from $() is clean.
 inp () {
     local LABEL="$1" CURRENT="$2"
     stty_normal
