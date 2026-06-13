@@ -3,7 +3,7 @@
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
 # Version: 0.1.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
-# Last Updated: 2026-Jun-12
+# Last Updated: 2026-Jun-13
 # ============================================================================================================================
 #
 # Description:
@@ -23,7 +23,7 @@
 #   /tmp/stunmon/slotN/stunnel.log              : stunnel process log
 #
 # Prerequisites (Entware):
-#   opkg install stunnel curl
+#   opkg install stunnel
 #
 # Usage:
 #   stunmon.sh                                  : interactive monitoring display
@@ -1389,6 +1389,19 @@ yesno () {
     esac
 }
 
+# Promptyn is a simple function that accepts y/n input
+promptyn()
+{   # No defaults, just y or n
+  while true; do
+    read -p "$1" -n 1 -r yn
+      case "${yn}" in
+        [Yy]* ) return 0 ;;
+        [Nn]* ) return 1 ;;
+        * ) echo -e "\nPlease answer y or n.";;
+      esac
+  done
+}
+
 # inp: text prompt -- returns typed value or current on Enter.
 inp () {
     local LABEL="$1" CURRENT="$2"
@@ -1664,9 +1677,64 @@ setup_menu () {
         case "$_CHOICE" in
             6)  setup_new_slot ;;
             7)  setup_global ;;
-
             8)  for S in $STUNMON_MANAGED_SLOTS; do setup_validate "$S"; done ;;
             9)  setup_remove_slot ;;
+           10)  clear
+                echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Re-install Entware Dependencies                                          ${CClear}"
+				        echo -e "${InvGreen} ${CClear}"
+				        echo -e "${InvGreen} ${CClear} Missing or broken dependencies required by STUNMON will be re-installed during this"
+				        echo -e "${InvGreen} ${CClear} process."
+				        echo -e "${InvGreen} ${CClear}"
+				        echo -e "${InvGreen} ${CClear} Reinstalling these utilities require you to have Entware already installed using"
+				        echo -e "${InvGreen} ${CClear} the AMTM tool. If Entware is present, the following utilities will be uninstalled,"
+				        echo -e "${InvGreen} ${CClear} downloaded and reinstalled during this setup process..."
+				        echo -e "${InvGreen} ${CClear}"
+				        echo -e "${InvGreen} ${CClear} ${CGreen}stunnel${CClear} is a utility that wraps OpenVPN TCP traffic inside a genuine TLS session,"
+				        echo -e "${InvGreen} ${CClear} making it appear as standard HTTPS to deep packet inspection systems."
+				        echo -e "${InvGreen} ${CClear}"
+				        echo -e "${InvGreen} ${CClear} ${CGreen}JQuery${CClear} is a utility for querying data across the internet through the the means of"
+				        echo -e "${InvGreen} ${CClear} APIs for the purposes of interacting with the various data providers to get city"
+				        echo -e "${InvGreen} ${CClear} or other info for your selected VPN location(s)."
+				        echo -e "${InvGreen} ${CClear}"
+				        echo -e "${InvGreen} ${CClear} ${CGreen}Screen${CClear} is a utility that allows you to run SSH scripts in a standalone environment"
+				        echo -e "${InvGreen} ${CClear} directly on the router itself, instead of running your commands or a script from a"
+				        echo -e "${InvGreen} ${CClear} network-attached SSH client. This can provide greater stability due to it running on"
+				        echo -e "${InvGreen} ${CClear} the router itself."
+				        echo -e "${InvGreen} ${CClear}"
+                echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
+				        echo ""
+				        if promptyn "Force Re-install? [y/n]: "; then
+				            if [ -d "/opt" ]; then # Does entware exist? If yes proceed, if no error out.
+				              echo ""
+				              echo -e "\nUpdating Entware Packages..."
+				              echo ""
+				              opkg update
+				              echo ""
+				              echo -e "Force Re-installing Entware ${CGreen}stunnel${CClear} Package..."
+				              echo ""
+				              opkg install --force-reinstall stunnel
+				              echo ""
+				              echo -e "Force Re-installing Entware ${CGreen}JQuery${CClear} Package..."
+				              echo ""
+				              opkg install --force-reinstall jq
+				              echo ""
+				              echo -e "Force Re-installing Entware ${CGreen}Screen${CClear} Package..."
+				              echo ""
+				              opkg install --force-reinstall screen
+				              echo ""
+				              echo -e "Re-install completed..."
+				              echo ""
+				              read -rsp $'Press any key to continue...\n' -n1 key
+				            else
+				              clear
+				              echo -e "${CRed}ERROR: Entware was not found on this router...${CClear}"
+				              echo -e "Please install Entware using the AMTM utility before proceeding..."
+				              echo ""
+				              read -rsp $'Press any key to continue...\n' -n1 key
+				            fi
+				        fi
+				      ;;
+            
             [Ee]) break ;;
             [1-5])
                 if echo "$STUNMON_MANAGED_SLOTS" | grep -qw "$_CHOICE"; then
@@ -1693,7 +1761,7 @@ setup_new_slot () {
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} The slot must already be configured in the router's VPN client settings with the${CClear}"
     echo -e "${InvGreen} ${CClear} provider's stunnel .ovpn file loaded.${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     
     local NEWSLOT
@@ -1742,7 +1810,7 @@ setup_remove_slot () {
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Current slots in use: ${CWhite}${STUNMON_MANAGED_SLOTS:-none}${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     printf " Slot number to remove [1-5, e=Exit]: "
     local _SLOT; _SLOT=$(getkey); printf "%s
@@ -1776,7 +1844,7 @@ setup_global () {
         echo -e "${InvGreen} ${CClear}   (2)  Health interval    : ${CWhite}${STUNMON_HEALTHINTERVAL}${CClear} seconds (display mode refresh)"
         echo -e "${InvGreen} ${CClear}   (3)  Display refresh    : ${CWhite}${STUNMON_DISPLAY_REFRESH}${CClear} seconds"
         echo -e "${InvGreen} ${CClear}"
-        echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
+        echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
         echo ""
         printf " Option [1-3, e=Exit]: "
         local _G; _G=$(getkey); printf "%s
@@ -1810,13 +1878,13 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear} Before continuing, ensure you have the following files from your VPN provider:${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear}   * An stunnel .ssl config file   ${CDkGray}(e.g. AirVPN_..._SSL-443.ssl)${CClear}"
-    echo -e "${InvGreen} ${CClear}   * An stunnel CA certificate      ${CDkGray}(e.g. stunnel.crt)${CClear}"
+    echo -e "${InvGreen} ${CClear}   * An stunnel CA .crt certificate      ${CDkGray}(e.g. stunnel.crt)${CClear}"
     echo -e "${InvGreen} ${CClear}   * An stunnel .ovpn file loaded in the router's VPN client slot${CClear}"
     echo -e "${InvGreen} ${CClear}     ${CDkGray}(a specific .ovpn file that references 'remote 127.0.0.1 PORT')${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Copy the .ssl and .crt files to /jffs/scripts/ for easy selection.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}--------------------------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
 
     # Check stunnel binary
     echo -e "${InvGreen} ${CClear}"
@@ -1826,30 +1894,35 @@ first_run_wizard () {
         echo -e "${InvGreen} ${CClear}   Version        : ${CGreen}${_SVER}${CClear}"
     else
         echo -e "${InvGreen} ${CClear}   stunnel Status : ${CRed}Not installed${CClear}"
-        echo -e "${InvGreen} ${CClear}   Install via    : ${CWhite}opkg install stunnel${CClear}"
+        echo -e "${InvGreen} ${CClear}   Install via    : ${CWhite}opkg install stunnel ${CDkGray}(STUNMON will install on next step)${CClear}"
     fi
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     stty_normal
-    printf " Press ENTER to begin, or e to exit: "
+    printf " Press ENTER to begin [e=Exit]: "
     read -r _K
     [ "$(echo "$_K" | tr '[:upper:]' '[:lower:]')" = "e" ] && return
 
     if [ -z "$STUNNEL_BIN" ]; then
         stty_normal
-        printf " stunnel is not installed. Install via opkg now? [y/n]: "
+        echo ""
+        printf " stunnel binary is not installed. Install via Entware/opkg now? [y/n]: "
         read -r _INST
         if [ "$(echo "$_INST" | tr '[:upper:]' '[:lower:]')" = "y" ]; then
             echo ""
             echo -e " ${CWhite}Installing stunnel via opkg...${CClear}"
             if opkg install stunnel 2>&1; then
                 find_binaries
+                echo ""
                 echo -e " ${CGreen}stunnel installed successfully.${CClear}"
+                sleep 2
             else
+                echo ""
                 echo -e " ${CRed}Installation failed. Ensure Entware is installed and router has internet access.${CClear}"
+                echo ""
                 stty_normal
-                printf " Press ENTER to continue anyway, or e to exit: "
+                printf " Press ENTER to continue anyway [e=Exit]: "
                 read -r _K2
                 [ "$(echo "$_K2" | tr '[:upper:]' '[:lower:]')" = "e" ] && return
             fi
@@ -1858,12 +1931,12 @@ first_run_wizard () {
 
     # Page 2: Slot number and provider
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Step 1 of 4: Slot and Provider                                      ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 1 of 4: Slot and Provider Info                                     ${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Which OVPN client slot is configured with your provider's stunnel .ovpn?${CClear}"
     echo -e "${InvGreen} ${CClear} ${CDkGray}(The specific .ovpn that references 'remote 127.0.0.1 PORT')${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     local SLOT PROV
     while true; do
@@ -1871,9 +1944,10 @@ first_run_wizard () {
         printf " OVPN slot number [1-5]: "
         read -r SLOT
         case "$SLOT" in [1-5]) break ;;
-            *) echo -e "  ${CRed}Enter a number between 1 and 5.${CClear}" ;;
+            *) echo ""; echo -e "  ${CRed}Enter a number between 1 and 5.${CClear}"; echo ""; sleep 2 ;;
         esac
     done
+    echo ""
     stty_normal
     printf " VPN Provider name (e.g. AirVPN): "
     read -r PROV
@@ -1881,11 +1955,11 @@ first_run_wizard () {
 
     # Page 3: SSL config file
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Step 2 of 4: stunnel .ssl Config File                              ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 2 of 4: stunnel .ssl File Selection                                ${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Select the stunnel client config file provided by your VPN provider.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}   This is the stunnel .ssl file (not the .ovpn file) that defines the TLS tunnel:${CClear}"
+    echo -e "${InvGreen} ${CClear}   This is the stunnel .ssl file (not the .ovpn file) that contains TLS tunnel info:${CClear}"
     echo -e "${InvGreen} ${CClear}   ${CYellow}accept = 127.0.0.1:1413     (local OpenVPN connects here)${CClear}"
     echo -e "${InvGreen} ${CClear}   ${CYellow}connect = 64.x.x.x:443      (your VPN provider's stunnel server)${CClear}"
     echo -e "${InvGreen} ${CClear}   ${CYellow}verify = 3                  (verify server cert against CA cert)${CClear}"
@@ -1893,18 +1967,21 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   For AirVPN this file is named: ${CDkGray}AirVPN_..._SSL-443.ssl${CClear}"
     echo -e "${InvGreen} ${CClear}   Copy it to /jffs/scripts/ before continuing.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
 
     local SSLF=""
     while true; do
         pick_file "*.ssl" "stunnel .ssl config"
         SSLF="$PICKED_FILE"
-        [ -z "$SSLF" ] && echo -e "  ${CYellow}No file selected. Try again or copy the file to /jffs/scripts/.${CClear}" && continue
+        [ -z "$SSLF" ] && echo "" && echo -e "  ${CYellow}No file selected. Try again or copy the file to /jffs/scripts/.${CClear}" && sleep 2 && continue
         if [ ! -f "$SSLF" ]; then
-            echo -e "  ${CRed}File not found: ${SSLF}${CClear}"; continue
+        	  echo ""
+            echo -e "  ${CRed}File not found: ${SSLF}${CClear}"; sleep 2; continue
         fi
         if ! grep -qi 'accept\|connect' "$SSLF" 2>/dev/null; then
+        	  echo ""
             echo -e "  ${CYellow}Warning: file does not look like a stunnel config (no accept/connect lines found).${CClear}"
+            echo ""
             stty_normal
             printf " Use it anyway? [y/n]: "
             read -r _CHK; [ "$(echo "$_CHK" | tr '[:upper:]' '[:lower:]')" = "y" ] && break
@@ -1912,11 +1989,13 @@ first_run_wizard () {
         fi
         break
     done
+    echo ""
     echo -e "  ${CGreen}SSL config selected: ${SSLF}${CClear}"
+    sleep 2
 
     # Page 4: CA certificate
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Step 3 of 4: CA Certificate                                        ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 3 of 4: CA Certificate Selection                                   ${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} Select the CA certificate file provided by your VPN provider.${CClear}"
     echo -e "${InvGreen} ${CClear}"
@@ -1926,26 +2005,30 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   For AirVPN this file is named: ${CYellow}stunnel.crt${CClear}"
     echo -e "${InvGreen} ${CClear}   Copy it to /jffs/scripts/ before continuing.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
 
     local CERTF=""
     while true; do
         pick_file "*.crt *.pem" "CA certificate"
         CERTF="$PICKED_FILE"
-        [ -z "$CERTF" ] && echo -e "  ${CYellow}No file selected. Try again.${CClear}" && continue
+        [ -z "$CERTF" ] && echo "" && echo -e "  ${CYellow}No file selected. Try again.${CClear}" && sleep 2 && continue
         if [ ! -f "$CERTF" ]; then
-            echo -e "  ${CRed}File not found: ${CERTF}${CClear}"; continue
+            echo ""
+            echo -e "  ${CRed}File not found: ${CERTF}${CClear}"; sleep 2; continue
         fi
         if ! grep -q 'BEGIN CERTIFICATE' "$CERTF" 2>/dev/null; then
-            echo -e "  ${CRed}File is not a valid PEM certificate (no BEGIN CERTIFICATE header found).${CClear}"; continue
+        	  echo ""
+            echo -e "  ${CRed}File is not a valid PEM certificate (no BEGIN CERTIFICATE header found).${CClear}"; sleep 2; continue
         fi
         break
     done
+    echo ""
     echo -e "  ${CGreen}CA certificate selected: ${CERTF}${CClear}"
+    sleep 2
 
     # Page 5: Optional settings
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Step 4 of 4: Optional Settings                                    ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 4 of 4: Optional Settings                                          ${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear} SNI Hostname (optional -- leave blank to skip):${CClear}"
     echo -e "${InvGreen} ${CClear}"
@@ -1954,7 +2037,7 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   ${CYellow}Examples: onedrive.live.com  outlook.live.com  www.microsoft.com${CClear}"
     echo -e "${InvGreen} ${CClear}   ${CYellow}Note: IP-level correlation still reveals the true destination.${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     local SNIHOST
     stty_normal
@@ -1963,7 +2046,7 @@ first_run_wizard () {
 
     # Confirm and save
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Confirm Configuration                                              ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Confirm Configuration                                                   ${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear}   Slot         : ${CWhite}${SLOT}${CClear}"
     echo -e "${InvGreen} ${CClear}   Provider     : ${CWhite}${PROV}${CClear}"
@@ -1974,14 +2057,15 @@ first_run_wizard () {
     echo -e "${InvGreen} ${CClear}   Debug level  : ${CWhite}0${CClear} (silent/production)"
     echo -e "${InvGreen} ${CClear}   TCP_NODELAY  : ${CGreen}enabled${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear}${CDkGray}  -----------------------------------------------------------------------${CClear}"
+    echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------${CClear}"
     echo ""
     stty_normal
     printf " Save this configuration and start stunmon? [y/n]: "
     read -r _GO
     if [ "$(echo "$_GO" | tr '[:upper:]' '[:lower:]')" != "y" ]; then
-        echo -e "  ${CYellow}Configuration not saved. Run stunmon.sh -setup to configure at any time.${CClear}"
-        sleep 2; return
+    	  echo ""
+        echo -e "  ${CYellow}Configuration not saved. Run 'stunmon.sh -setup' to configure at any time.${CClear}"
+        sleep 3; return
     fi
 
     # Populate and save config
@@ -2000,11 +2084,16 @@ first_run_wizard () {
     set_sv "$SLOT" REMOTE_HOST    ""
     set_sv "$SLOT" REMOTE_PORT    "443"
 
+    echo ""
     echo -e "  ${CWhite}Parsing connection parameters from .ssl file...${CClear}"
+    sleep 1
+    echo ""
     if parse_ssl_conf "$SLOT"; then
         echo -e "  ${CGreen}Parsed: local=$(get_sv $SLOT LOCAL_HOST):$(get_sv $SLOT LOCAL_PORT)  remote=$(get_sv $SLOT REMOTE_HOST):$(get_sv $SLOT REMOTE_PORT)${CClear}"
+        sleep 1
     else
         echo -e "  ${CYellow}Could not auto-parse .ssl file. Set remote host manually in setup (option 6).${CClear}"
+        sleep 1
     fi
 
     save_config
