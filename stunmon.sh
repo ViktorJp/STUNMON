@@ -42,6 +42,9 @@
 export PATH="/opt/bin:/opt/sbin:/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
 unset LD_LIBRARY_PATH
 
+# To support automatic script updates from AMTM #
+doScriptUpdateFromAMTM=true
+
 # -- Version -------------------------------------------------------------------
 Version="0.2.0"
 
@@ -1843,6 +1846,37 @@ updatecheck() {
   fi
 }
 
+##-------------------------------------------##
+## Borrwed from ExtremeFiretop [2026-Apr-11] ##
+##-------------------------------------------##
+ScriptUpdateFromAMTM()
+{
+    if ! "$doScriptUpdateFromAMTM"
+    then
+        printf "Automatic script updates via AMTM are currently disabled.\n\n"
+        return 1
+    fi
+
+    if [ $# -gt 0 ] && [ "$1" = "check" ]
+    then return 0
+    fi
+
+    # Force a STUNMON download and update
+    echo ""
+    echo -e "${InvGreen} ${CClear} Downloading latest ${CGreen}STUNMON${CClear}... Please stand by while we increase your online safety & security..."
+    curl --silent --fail --retry 3 "https://raw.githubusercontent.com/ViktorJp/STUNMON/main/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
+    DLsuccess=$?
+    if [ "$DLsuccess" -eq 0 ]; then
+      echo -e "${InvGreen} ${CClear} STUNMON Download/Update Success."
+      echo ""
+    else
+      echo -e "${InvRed} ${CClear} STUNMON Download/Update Failed. Please check all the things."
+      echo ""
+    fi
+
+    return "$DLsuccess"
+}
+
 # -------------------------------------------------------------------------------------------------------------------------
 # vuninstall is a function that uninstalls and removes all traces of vpnmon-r3 from your router...
 vuninstall() {
@@ -2489,6 +2523,12 @@ main () {
 				    exit 0
 			      ;;
 			      
+			  -amtmupdate)   
+            shift
+            ScriptUpdateFromAMTM "$@"
+            exit "$?"
+            ;;
+			  
         "")
             # Interactive display -- first-run wizard if not configured
             if [ -z "$STUNMON_MANAGED_SLOTS" ]; then
