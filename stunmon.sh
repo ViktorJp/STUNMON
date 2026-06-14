@@ -3,7 +3,7 @@
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
 # Version: 0.2.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
-# Last Updated: 2026-Jun-13
+# Last Updated: 2026-Jun-14
 # ============================================================================================================================
 #
 # Description:
@@ -934,8 +934,8 @@ health_check_slot () {
 # ============================================================================================================================
 
 # Spinner is a script that provides a small indicator on the screen to show script activity
-spinner()
-{
+spinner () {
+	
   spins=$1
 
   spin=0
@@ -1397,8 +1397,7 @@ yesno () {
 }
 
 # Promptyn is a simple function that accepts y/n input
-promptyn()
-{   # No defaults, just y or n
+promptyn () {   # No defaults, just y or n
   while true; do
     read -p "$1" -n 1 -r yn
       case "${yn}" in
@@ -1822,7 +1821,7 @@ done
 }
 
 # updatecheck is a function that downloads the latest update version file, and compares it with what's currently installed
-updatecheck() {
+updatecheck () {
 
   # Download the latest version file from the source repository
   curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/version.txt" -o "/jffs/addons/stunmon.d/version.txt"
@@ -1849,8 +1848,7 @@ updatecheck() {
 ##-------------------------------------------##
 ## Borrwed from ExtremeFiretop [2026-Apr-11] ##
 ##-------------------------------------------##
-ScriptUpdateFromAMTM()
-{
+ScriptUpdateFromAMTM () {
     if ! "$doScriptUpdateFromAMTM"
     then
         printf "Automatic script updates via AMTM are currently disabled.\n\n"
@@ -1878,8 +1876,8 @@ ScriptUpdateFromAMTM()
 }
 
 # -------------------------------------------------------------------------------------------------------------------------
-# vuninstall is a function that uninstalls and removes all traces of vpnmon-r3 from your router...
-vuninstall() {
+# vuninstall is a function that uninstalls and removes all traces of STUNMON from your router...
+vuninstall () {
 
 while true; do
   clear
