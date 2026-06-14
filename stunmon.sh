@@ -1782,7 +1782,7 @@ while true; do
       if promptyn "[y/n]: "; then
         echo ""
         echo -e "\nDownloading STUNMON ${CGreen}v$DLversion${CClear}"
-        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
+        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/main/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
         echo ""
         echo -e "Download successful!${CClear}"
         slog_info "Successfully downloaded and installed STUNMON v$DLversion"
@@ -1801,7 +1801,7 @@ while true; do
       if promptyn "[y/n]: "; then
         echo ""
         echo -e "\nDownloading STUNMON ${CGreen}v$DLversion${CClear}"
-        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
+        curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/main/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
         echo ""
         echo -e "Download successful!${CClear}"
         slog_info "Successfully downloaded and installed STUNMON v$DLversion"
@@ -1824,7 +1824,7 @@ done
 updatecheck () {
 
   # Download the latest version file from the source repository
-  curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/develop/version.txt" -o "/jffs/addons/stunmon.d/version.txt"
+  curl --silent --fail --retry 3 --max-time 10 --retry-delay 2 --retry-all-errors "https://raw.githubusercontent.com/ViktorJp/STUNMON/main/version.txt" -o "/jffs/addons/stunmon.d/version.txt"
 
   if [ -f $STUNMON_VER ]
     then
