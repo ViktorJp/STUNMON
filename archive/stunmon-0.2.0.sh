@@ -1,9 +1,9 @@
 #!/bin/sh
 # ============================================================================================================================
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
-# Version: 0.3.0
+# Version: 0.2.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
-# Last Updated: 2026-Jul-05
+# Last Updated: 2026-Jun-14
 # ============================================================================================================================
 #
 # Description:
@@ -46,7 +46,7 @@ unset LD_LIBRARY_PATH
 doScriptUpdateFromAMTM=true
 
 # -- Version -------------------------------------------------------------------
-Version="0.3.0"
+Version="0.2.0"
 
 # Color variables
 CBlack="\e[1;30m"
@@ -84,7 +84,6 @@ STUNMON_MANAGED_SLOTS=""         # space-separated list of slot numbers
 STUNMON_LOGRETENTION=2500        # rows to keep log entries
 STUNMON_HEALTHINTERVAL=30        # seconds between health checks in display mode
 STUNMON_DISPLAY_REFRESH=30       # display auto-refresh interval (seconds)
-STUNMON_AUTOSTART=0              # autostart script (0=no, 1=yes)
 
 # -- Runtime state (populated at start / updated by health checks) -------------
 DISPLAY_MODE=0                   # 1 when running interactive display loop
@@ -140,7 +139,6 @@ save_config () {
         echo "STUNMON_LOGRETENTION=${STUNMON_LOGRETENTION}"
         echo "STUNMON_HEALTHINTERVAL=${STUNMON_HEALTHINTERVAL}"
         echo "STUNMON_DISPLAY_REFRESH=${STUNMON_DISPLAY_REFRESH}"
-        echo "STUNMON_AUTOSTART=${STUNMON_AUTOSTART}"
         echo ""
         echo "# -- Per-slot settings --------------------------------------------------------"
         for S in $STUNMON_MANAGED_SLOTS; do
@@ -1185,20 +1183,13 @@ display_main () {
     while true; do
         stty_normal
         clear
-		
-		    #autostart colors and indicators
-		    if [ "$STUNMON_AUTOSTART" = "0" ]; then
-		       rebootprot="${CDkGray}Disabled${CClear}"
-		    elif [ "$STUNMON_AUTOSTART" = "1" ]; then
-		       rebootprot="${CGreen}Enabled${CClear}"
-		    fi
 
         # Operations menu at TOP (when shown)
         if [ "$SHOW_OPS" = "1" ]; then
             echo -e "${InvGreen} ${InvDkGray} ${CWhite}Operations Menu                                                                                             ${CClear}"
             printf "${InvGreen} ${CClear} Select Slot Detail:       1:${CGreen}(1)${CClear} 2:${CGreen}(2)${CClear} 3:${CGreen}(3)${CClear} 4:${CGreen}(4)${CClear} 5:${CGreen}(5)${CClear} ${InvGreen} ${CClear} ${CGreen}(C)${CClear}onfiguration / Main Setup Menu\n"
             printf "${InvGreen} ${CClear} Reset stunnel/OPVN Slot:  1:${CGreen}(!)${CClear} 2:${CGreen}(@)${CClear} 3:${CGreen}(#)${CClear} 4:${CGreen}(\$)${CClear} 5:${CGreen}(%%)${CClear} ${InvGreen} ${CClear} ${CDkGray}A(M)TM Email Notifications: Success, Failure\n"
-            printf "${InvGreen} ${CClear} ${CGreen}(R)${CClear}efresh Display Stats                                 ${InvGreen} ${CClear} ${CGreen}(A)${CClear}utostart STUNMON on Reboot: $rebootprot\n"
+            printf "${InvGreen} ${CClear} ${CGreen}(R)${CClear}efresh Display Stats                                 ${InvGreen} ${CClear} ${CDkGray}(A)utostart STUNMON on Reboot: Enabled\n"
             printf "${InvGreen} ${CClear} ${CGreen}(L)${CClear}og Viewer                                            ${InvGreen} ${CClear} ${CGreen}(Q)${CClear}uit STUNMON\n"
             echo -e "${InvGreen} ${CClear}${CDkGray}-------------------------------------------------------------------------------------------------------------${CClear}"
             echo ""
@@ -1270,7 +1261,6 @@ display_main () {
             c|C) stty_normal; setup_menu; load_config ;;
             r|R) health_check_all; update_status_file ;;
             l|L) display_full_log ;;
-            a|A) autostart ;;
             e|E|q|Q) break ;;   # e=Exit and q=Quit both terminate the display loop
             '!') reset_slot_connection 1 ;;
             '@') reset_slot_connection 2 ;;
@@ -1929,92 +1919,6 @@ while true; do
     sleep 1
     return
   fi
-done
-}
-
-# -------------------------------------------------------------------------------------------------------------------------
-# autostart lets you enable the ability for stunmon to autostart after a router reboot
-
-autostart()
-{
-
-while true; do
-  clear
-  echo -e "${InvGreen} ${InvDkGray}${CWhite} Reboot Protection                                                                     ${CClear}"
-  echo -e "${InvGreen} ${CClear}"
-  echo -e "${InvGreen} ${CClear} Please indicate below if you would like to enable STUNMON to autostart after a"
-  echo -e "${InvGreen} ${CClear} router reboot. This will ensure continued, uninterrupted VPN connection monitoring."
-  echo -e "${InvGreen} ${CClear} (Default = Disabled)"
-  echo -e "${InvGreen} ${CClear}${CDkGray}---------------------------------------------------------------------------------------${CClear}"
-  echo -e "${InvGreen} ${CClear}"
-  if [ "$STUNMON_AUTOSTART" = "0" ]
-  then
-     echo -e "${InvGreen} ${CClear} Current: ${CRed}Disabled${CClear}"
-  elif [ "$STUNMON_AUTOSTART" = "1" ]
-  then
-     echo -e "${InvGreen} ${CClear} Current: ${CGreen}Enabled${CClear}"
-  fi
-  echo
-  read -p 'Enable Reboot Protection? (0=No, 1=Yes, e=Exit): ' newAutoStart
-  # Use default value on enter keypress or invalid input #
-  if [ -z "$newAutoStart" ] ; then newAutoStart="${STUNMON_AUTOSTART:=0}" ; fi
-
-  if [ "$newAutoStart" = "0" ]
-  then
-    STUNMON_AUTOSTART=0
-    if [ -f /jffs/scripts/post-mount ]
-    then
-      sed -i -e '/stunmon.sh/d' /jffs/scripts/post-mount
-      echo ""
-      echo -e "${CGreen}[Modifying POST-MOUNT file]..."
-      slog_info "Reboot Protection Disabled"
-      save_config
-      sleep 2
-      break
-    fi
-
-  elif [ "$newAutoStart" = "1" ]
-  then
-    STUNMON_AUTOSTART=1
-    if [ -f /jffs/scripts/post-mount ]
-    then
-      if ! grep -q -F "(sleep 30 && /jffs/scripts/stunmon.sh -screen) & # Added by stunmon" /jffs/scripts/post-mount
-      then
-        echo "(sleep 30 && /jffs/scripts/stunmon.sh -screen) & # Added by stunmon" >> /jffs/scripts/post-mount
-        echo
-        echo -e "${CGreen}[Modifying POST-MOUNT file]..."
-        slog_info "Reboot Protection Enabled"
-        save_config
-        sleep 2
-        break
-      else
-        save_config
-        sleep 1
-      fi
-
-    else
-      echo "#!/bin/sh" > /jffs/scripts/post-mount
-      echo "" >> /jffs/scripts/post-mount
-      echo "(sleep 30 && /jffs/scripts/stunmon.sh -screen) & # Added by stunmon" >> /jffs/scripts/post-mount
-      chmod 755 /jffs/scripts/post-mount
-      echo
-      echo -e "${CGreen}[Modifying POST-MOUNT file]..."
-      slog_info "Reboot Protection Enabled"
-      save_config
-      sleep 2
-      break
-    fi
-
-  elif [ "$newAutoStart" = "e" ]
-  then
-     echo ; echo -e "${CClear}[Exiting]"
-     sleep 2
-     break
-  else
-     STUNMON_AUTOSTART="${STUNMON_AUTOSTART:=0}"
-     save_config
-  fi
-
 done
 }
 
