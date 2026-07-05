@@ -1,3 +1,7 @@
+v0.3.0      - PATCH: Added reboot protection capabilities, adding an entry into the POST-MOUNT so that STUNMON will
+              continue operating after a router reboot. This functionality is available via the (S)how Operations
+              Menu using the "A" key.
+
 v0.2.0      - MINOR: STUNMON is at a stage ready for anyone willing to Beta test it. All remaining necessities have
               been built-in, such as an easy-install wizard to help guide you through the steps to configure a solid
               running stunnel connection, setup menu to configure the script, update menu to check for updates to
