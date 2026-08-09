@@ -1,9 +1,9 @@
 #!/bin/sh
 # ============================================================================================================================
 # stunmon.sh - Asus-Merlin stunnel Connection Monitor and Manager
-# Version: 0.4.0
+# Version: 0.3.0
 # Companion to VPNMON-R3  |  https://github.com/ViktorJp/VPNMON-R3
-# Last Updated: 2026-Aug-08
+# Last Updated: 2026-Jul-05
 # ============================================================================================================================
 #
 # Description:
@@ -22,7 +22,7 @@
 #   /tmp/stunmon/slotN/stunnel.pid              : runtime PID file
 #   /tmp/stunmon/slotN/stunnel.log              : stunnel process log
 #
-# Prerequisites (Entware) performed when installing STUNMON:
+# Prerequisites (Entware):
 #   opkg install stunnel
 #   opkg install jq
 #   opkg install screen
@@ -45,8 +45,8 @@ unset LD_LIBRARY_PATH
 # To support automatic script updates from AMTM #
 doScriptUpdateFromAMTM=true
 
-# Version -------------------------------------------------------------------
-Version="0.4.0"
+# -- Version -------------------------------------------------------------------
+Version="0.3.0"
 
 # Color variables
 CBlack="\e[1;30m"
@@ -69,7 +69,7 @@ CWhite="\e[1;37m"
 InvWhite="\e[1;107m"
 CClear="\e[0m"
 
-# Application directories ---------------------------------------------------
+# -- Application directories ---------------------------------------------------
 APPPATH="/jffs/scripts/stunmon.sh"
 STUNMON_DIR="/jffs/addons/stunmon.d"
 STUNMON_CFG="${STUNMON_DIR}/stunmon.cfg"
@@ -79,46 +79,46 @@ STUNMON_VER="${STUNMON_DIR}/version.txt"
 CONFIGS_DIR="${STUNMON_DIR}/configs"
 RUNDIR="/tmp/stunmon"
 
-# Global config defaults (overwritten by load_config) ----------------------
+# -- Global config defaults (overwritten by load_config) ----------------------
 STUNMON_MANAGED_SLOTS=""         # space-separated list of slot numbers
 STUNMON_LOGRETENTION=2500        # rows to keep log entries
 STUNMON_HEALTHINTERVAL=30        # seconds between health checks in display mode
 STUNMON_DISPLAY_REFRESH=30       # display auto-refresh interval (seconds)
 STUNMON_AUTOSTART=0              # autostart script (0=no, 1=yes)
 
-# Runtime state (populated at start / updated by health checks) -------------
+# -- Runtime state (populated at start / updated by health checks) -------------
 DISPLAY_MODE=0                   # 1 when running interactive display loop
 
-# Slot-specific variable accessors-------------------------------------------
+# -- Slot-specific variable accessors-------------------------------------------
 # Convention: SLOT${N}_VARNAME  e.g. SLOT5_PROVIDER, SLOT5_LOCAL_PORT
 # get_sv SLOT VARNAME  -> prints the value
 # set_sv SLOT VARNAME VALUE  -> sets the variable
 get_sv () { eval echo "\${SLOT${1}_${2}:-}"; }
 set_sv () { eval "SLOT${1}_${2}=\"${3}\""; }
 
-# Runtime path helpers per slot ---------------------------------------------
+# -- Runtime path helpers per slot ---------------------------------------------
 slot_rundir  () { echo "${RUNDIR}/slot${1}"; }
 slot_pidfile () { echo "${RUNDIR}/slot${1}/stunnel.pid"; }
 slot_stlog   () { echo "${RUNDIR}/slot${1}/stunnel.log"; }
 slot_conf    () { echo "${CONFIGS_DIR}/slot${1}.conf"; }
 slot_cert    () { echo "${CONFIGS_DIR}/slot${1}.crt"; }
 
-# Timestamp -----------------------------------------------------------------
+# -- Timestamp -----------------------------------------------------------------
 ts  () { date +'%b %d %Y %X'; }
 tss () { date +'%H:%M:%S'; }     # short form for display
 
-# Router identity -----------------------------------------------------------
+# -- Router identity -----------------------------------------------------------
 ROUTERMODEL=$(nvram get model 2>/dev/null)
 ROUTERNAME=$(nvram get router_name 2>/dev/null)
 ROUTERMODEL=${ROUTERMODEL:-"Unknown"}
 ROUTERNAME=${ROUTERNAME:-"Router"}
 
-# OpenSSL and stunnel binary locations (populated by find_binaries) ---------
+# -- OpenSSL and stunnel binary locations (populated by find_binaries) ---------
 STUNNEL_BIN=""
 OPENSSL_BIN=""
 
 # ============================================================================================================================
-# Section 1 - Configuration read / write
+# Section 1 -- Configuration read / write
 # ============================================================================================================================
 
 # Create all required directories
@@ -131,18 +131,18 @@ create_dirs () {
 save_config () {
     create_dirs
     {
-        echo "# stunmon.cfg - stunnel Connection Manager configuration"
+        echo "# stunmon.cfg -- stunnel Connection Manager configuration"
         echo "# Written by stunmon.sh v${Version} on $(ts)"
         echo "# Do not edit manually while stunmon is running."
         echo ""
-        echo "# Global settings ----------------------------------------------------------"
+        echo "# -- Global settings ----------------------------------------------------------"
         echo "STUNMON_MANAGED_SLOTS=\"${STUNMON_MANAGED_SLOTS}\""
         echo "STUNMON_LOGRETENTION=${STUNMON_LOGRETENTION}"
         echo "STUNMON_HEALTHINTERVAL=${STUNMON_HEALTHINTERVAL}"
         echo "STUNMON_DISPLAY_REFRESH=${STUNMON_DISPLAY_REFRESH}"
         echo "STUNMON_AUTOSTART=${STUNMON_AUTOSTART}"
         echo ""
-        echo "# Per-slot settings --------------------------------------------------------"
+        echo "# -- Per-slot settings --------------------------------------------------------"
         for S in $STUNMON_MANAGED_SLOTS; do
             echo ""
             echo "# Slot ${S}"
@@ -200,10 +200,11 @@ load_config () {
 }
 
 # ============================================================================================================================
-# Section 2 - Logging
+# Section 2 -- Logging
 # ============================================================================================================================
 
-# log LEVEL MESSAGE - write to stunmon.log and optionally stdout
+# log LEVEL MESSAGE  -- write to stunmon.log and optionally stdout
+# LEVEL: INFO WARN ERROR
 slog () {
     local LEVEL="$1"; shift
     local MSG="$*"
@@ -244,7 +245,7 @@ nano +999999 --linenumbers $STUNMON_LOG
 }
 
 # ============================================================================================================================
-# Section 3 - Binary detection
+# Section 3 -- Binary detection
 # ============================================================================================================================
 
 find_binaries () {
@@ -263,7 +264,7 @@ find_binaries () {
 }
 
 # ============================================================================================================================
-# Section 4 - stunnel lifecycle
+# Section 4 -- stunnel lifecycle
 # ============================================================================================================================
 
 # Is the stunnel process for slot N alive?
@@ -283,7 +284,7 @@ stunmon_pid () {
     [ -f "$PF" ] && cat "$PF" 2>/dev/null || echo ""
 }
 
-# Start stunnel for slot N - launches in foreground mode with &
+# Start stunnel for slot N -- launches in foreground mode with &
 stunmon_start () {
     local SLOT="$1"
     local RD; RD=$(slot_rundir "$SLOT")
@@ -312,6 +313,7 @@ stunmon_start () {
     local BG_PID=$!
 
     # Write PID immediately as a bootstrap; stunnel's own pid= directive
+    # will confirm/overwrite once it initialises.
     echo "$BG_PID" > "$PF"
 
     # Wait for stunnel to bind its local port (up to 8 seconds)
@@ -331,7 +333,7 @@ stunmon_start () {
         update_status_file
         return 0
     else
-        slog_error "stunmon_start slot${SLOT}: process died during startup - check $(slot_stlog $SLOT)"
+        slog_error "stunmon_start slot${SLOT}: process died during startup -- check $(slot_stlog $SLOT)"
         rm -f "$PF"
         return 1
     fi
@@ -395,7 +397,7 @@ stunmon_status () {
 }
 
 # ============================================================================================================================
-# Section 5 - Config file parsing and generation
+# Section 5 -- Config file parsing and generation
 # ============================================================================================================================
 
 # Parse a provider .ssl file to extract connection parameters for slot N
@@ -465,10 +467,10 @@ generate_stunnel_conf () {
     # Endpoint comes directly from REMOTE_HOST / REMOTE_PORT (single endpoint, no list)
 
     cat > "$CF" << EOF
-# stunmon generated stunnel config - slot ${SLOT}
+# stunmon generated stunnel config -- slot ${SLOT}
 # Provider : $(get_sv $SLOT PROVIDER)
 # Generated: $(ts)
-# Do not edit manually - regenerated by stunmon on each start/restart.
+# Do not edit manually -- regenerated by stunmon on each start/restart.
 
 ; Process management
 pid    = ${PF}
@@ -488,7 +490,7 @@ verify       = ${VFY}
 CAfile       = ${CERTF}
 EOF
 
-    # TCP_NODELAY - disables Nagle on both sockets, critical for TCP-over-TCP
+    # TCP_NODELAY -- disables Nagle on both sockets, critical for TCP-over-TCP
     if [ "$NDLY" = "1" ]; then
         echo "socket       = l:TCP_NODELAY=1" >> "$CF"
         echo "socket       = r:TCP_NODELAY=1" >> "$CF"
@@ -506,7 +508,7 @@ EOF
 }
 
 # ============================================================================================================================
-# Section 6 - Endpoint list management
+# Section 6 -- Endpoint list management
 # ============================================================================================================================
 
 # Return the current endpoint for slot N (host:port or empty)
@@ -519,7 +521,7 @@ get_current_endpoint () {
 }
 
 # ============================================================================================================================
-# Section 7 - Health check and VPNMON-R3 status file
+# Section 7 -- Health check and VPNMON-R3 status file
 # ============================================================================================================================
 
 # Probe SSL connectivity through the VPN tunnel interface for slot N
@@ -556,7 +558,7 @@ get_tls_info () {
         return
     fi
 
-    # 2. stunnel log - only has data when debug >= 5; never available at debug=0
+    # 2. stunnel log -- only has data when debug >= 5; never available at debug=0
     if [ -f "$LF" ]; then
         local TLS CIPHER
         TLS=$(grep "TLSv1\." "$LF" 2>/dev/null | tail -1 | sed "s/.*\(TLSv1\.[0-9]\).*/\1/" | grep "^TLSv")
@@ -701,7 +703,7 @@ record_start_time () {
 update_status_file () {
     create_dirs
     {
-        echo "# stunmon.status - written by stunmon.sh v${Version}"
+        echo "# stunmon.status -- written by stunmon.sh v${Version}"
         echo "# Updated: $(ts)"
         echo "# Source this file in VPNMON-R3 to detect stunnel-managed slots."
         echo ""
@@ -789,12 +791,12 @@ update_slot_city () {
         CACHED_CITY=$(cut -d'|' -f2 "$CACHEF" 2>/dev/null)
     fi
 
-    # Cache hit: egress IP unchanged and city is known - no lookup needed
+    # Cache hit: egress IP unchanged and city is known -- no lookup needed
     if [ "$EGRESS" = "$CACHED_EGRESS" ] && [ -n "$CACHED_CITY" ]; then
         return 0
     fi
 
-    # New egress IP (or first run) - query ip-api.com for city name
+    # New egress IP (or first run) -- query ip-api.com for city name
     slog_info "city_lookup slot${SLOT}: querying city for ${EGRESS}"
     local CITY="" API_RESP
     API_RESP=$(curl --silent --fail --max-time 10 --retry 2 --retry-delay 2 \
@@ -831,7 +833,7 @@ health_check_all () {
         health_check_slot "$S"
     done
     update_status_file
-    # Refresh city/egress cache in the background - non-blocking
+    # Refresh city/egress cache in the background -- non-blocking
     for S in $STUNMON_MANAGED_SLOTS; do
         [ "$(get_sv $S ENABLED)" = "0" ] && continue
         update_slot_city "$S" &
@@ -841,16 +843,16 @@ health_check_all () {
 # Health check logic for one slot.
 #
 # Three independent checks are run each cycle:
-#   A - stunnel process alive (kill -0 on PID file)
-#   B - OpenVPN client state = 2 (nvram vpn_clientN_state)
-#   C - SSL probe through the tun interface (curl via tun1N)
+#   A -- stunnel process alive (kill -0 on PID file)
+#   B -- OpenVPN client state = 2 (nvram vpn_clientN_state)
+#   C -- SSL probe through the tun interface (curl via tun1N)
 #
 # Recovery matrix:
-#   A=1 B=1 C=1  Healthy - no action
-#   A=0 B=1      stunnel died while VPN thinks it's up - restart both
-#   A=1 B=0      VPN dropped (manual stop, crash, timeout) - restart VPN
-#   A=1 B=1 C=0  Both up but no traffic - full restart
-#   else         Full failure - restart both, give up after MAX_R attempts
+#   A=1 B=1 C=1  Healthy -- no action
+#   A=0 B=1      stunnel died while VPN thinks it's up -- restart both
+#   A=1 B=0      VPN dropped (manual stop, crash, timeout) -- restart VPN
+#   A=1 B=1 C=0  Both up but no traffic -- full restart
+#   else         Full failure -- restart both, give up after MAX_R attempts
 #
 # This function is called automatically every STUNMON_DISPLAY_REFRESH seconds
 # by the display loop timeout, and also on-demand via the -check cron mode.
@@ -869,68 +871,68 @@ health_check_slot () {
     local FC=0 MAX_R=3
 
     if [ "$A" = "1" ] && [ "$B" = "1" ] && [ "$C" = "1" ]; then
-        # Fully healthy - reset consecutive-failure counter and return
-        slog_info "health_check slot${SLOT}: PASS - stunnel=UP(${PID}) vpn=${VPN_ST} ssl=OK"
+        # Fully healthy -- reset consecutive-failure counter and return
+        slog_info "health_check slot${SLOT}: PASS -- stunnel=UP(${PID}) vpn=${VPN_ST} ssl=OK"
         set_sv "$SLOT" FAIL_COUNT 0
         return 0
     fi
 
-    # ── Failure detected - log it and take recovery action ──────────────────
+    # ── Failure detected -- log it and take recovery action ──────────────────
 
     if [ "$A" = "0" ] && [ "$B" = "1" ]; then
         # stunnel process died while OpenVPN still reports connected.
         # Restart stunnel first, then cycle OpenVPN so it reconnects through it.
         FC=$((FC+1)); set_sv "$SLOT" FAIL_COUNT "$FC"
-        slog_warn "health_check slot${SLOT}: FAIL - stunnel=DOWN vpn=${VPN_ST} (attempt ${FC}/${MAX_R})"
-        slog_warn "health_check slot${SLOT}: RECOVERY - restarting stunnel then stopping/starting OpenVPN"
+        slog_warn "health_check slot${SLOT}: FAIL -- stunnel=DOWN vpn=${VPN_ST} (attempt ${FC}/${MAX_R})"
+        slog_warn "health_check slot${SLOT}: RECOVERY -- restarting stunnel then stopping/starting OpenVPN"
         stunmon_stop "$SLOT"
         service "stop_vpnclient${SLOT}" >/dev/null 2>&1; sleep 2
         generate_stunnel_conf "$SLOT" && record_start_time "$SLOT" && stunmon_start "$SLOT"
         service "start_vpnclient${SLOT}" >/dev/null 2>&1
-        slog_info "health_check slot${SLOT}: RECOVERY complete - stunnel restarted, OpenVPN restart issued"
+        slog_info "health_check slot${SLOT}: RECOVERY complete -- stunnel restarted, OpenVPN restart issued"
 
     elif [ "$A" = "1" ] && [ "$B" = "0" ]; then
         # OpenVPN dropped (manual stop, keepalive timeout, or crash).
         # stunnel is still healthy so we only need to restart OpenVPN.
         FC=$((FC+1)); set_sv "$SLOT" FAIL_COUNT "$FC"
-        slog_warn "health_check slot${SLOT}: FAIL - vpn=DOWN(state=${VPN_ST}) stunnel=UP (attempt ${FC}/${MAX_R})"
-        slog_warn "health_check slot${SLOT}: RECOVERY - stopping then starting vpnclient${SLOT}"
+        slog_warn "health_check slot${SLOT}: FAIL -- vpn=DOWN(state=${VPN_ST}) stunnel=UP (attempt ${FC}/${MAX_R})"
+        slog_warn "health_check slot${SLOT}: RECOVERY -- stopping then starting vpnclient${SLOT}"
         service "stop_vpnclient${SLOT}" >/dev/null 2>&1; sleep 2
         service "start_vpnclient${SLOT}" >/dev/null 2>&1
-        slog_info "health_check slot${SLOT}: RECOVERY complete - OpenVPN restart issued, awaiting state=2"
+        slog_info "health_check slot${SLOT}: RECOVERY complete -- OpenVPN restart issued, awaiting state=2"
 
     elif [ "$A" = "1" ] && [ "$B" = "1" ] && [ "$C" = "0" ]; then
         # Both stunnel and OpenVPN report up but traffic test fails.
         # Full restart: the tunnel is stale or the route is broken.
         FC=$((FC+1)); set_sv "$SLOT" FAIL_COUNT "$FC"
-        slog_warn "health_check slot${SLOT}: FAIL - stunnel=UP vpn=${VPN_ST} ssl=FAIL (attempt ${FC}/${MAX_R})"
-        slog_warn "health_check slot${SLOT}: RECOVERY - full restart (stunnel + OpenVPN)"
+        slog_warn "health_check slot${SLOT}: FAIL -- stunnel=UP vpn=${VPN_ST} ssl=FAIL (attempt ${FC}/${MAX_R})"
+        slog_warn "health_check slot${SLOT}: RECOVERY -- full restart (stunnel + OpenVPN)"
         stunmon_stop "$SLOT"; sleep 1
         service "stop_vpnclient${SLOT}" >/dev/null 2>&1; sleep 2
         generate_stunnel_conf "$SLOT" && record_start_time "$SLOT" && stunmon_start "$SLOT"
         service "start_vpnclient${SLOT}" >/dev/null 2>&1
-        slog_info "health_check slot${SLOT}: RECOVERY complete - full restart issued"
+        slog_info "health_check slot${SLOT}: RECOVERY complete -- full restart issued"
 
     else
         # Both stunnel and OpenVPN are down simultaneously.
         FC=$((FC+1)); set_sv "$SLOT" FAIL_COUNT "$FC"
-        slog_error "health_check slot${SLOT}: FAIL - stunnel=DOWN vpn=${VPN_ST} ssl=FAIL (attempt ${FC}/${MAX_R})"
+        slog_error "health_check slot${SLOT}: FAIL -- stunnel=DOWN vpn=${VPN_ST} ssl=FAIL (attempt ${FC}/${MAX_R})"
         if [ "$FC" -ge "$MAX_R" ]; then
-            slog_error "health_check slot${SLOT}: GIVING UP - ${FC} consecutive failures, manual intervention required"
+            slog_error "health_check slot${SLOT}: GIVING UP -- ${FC} consecutive failures, manual intervention required"
             return 1
         fi
-        slog_warn "health_check slot${SLOT}: RECOVERY - full restart (stunnel + OpenVPN)"
+        slog_warn "health_check slot${SLOT}: RECOVERY -- full restart (stunnel + OpenVPN)"
         service "stop_vpnclient${SLOT}" >/dev/null 2>&1; sleep 2
         generate_stunnel_conf "$SLOT" && record_start_time "$SLOT" && stunmon_start "$SLOT"
         service "start_vpnclient${SLOT}" >/dev/null 2>&1
-        slog_info "health_check slot${SLOT}: RECOVERY complete - full restart issued"
+        slog_info "health_check slot${SLOT}: RECOVERY complete -- full restart issued"
     fi
 
     return 1
 }
 
 # ============================================================================================================================
-# Section 9 - Display helper functions
+# Section 9 -- Display helper functions
 # ============================================================================================================================
 
 # Spinner is a script that provides a small indicator on the screen to show script activity
@@ -965,7 +967,7 @@ rpad () {
     printf "%-${WIDTH}s" "$STR"
 }
 
-# Status badge - RUNNING in green, STOPPED in yellow, FAILED in red
+# Status badge -- RUNNING in green, STOPPED in yellow, FAILED in red
 state_badge () {
     local STATE="$1"
     case "$STATE" in
@@ -1003,7 +1005,7 @@ reset_slot_connection () {
     printf "\r\033[2K${CGreen}  [ VPN${SLOT} ] Starting VPN client...${CClear}"
     service "start_vpnclient${SLOT}" >/dev/null 2>&1
 
-    printf "\r\033[2K${CGreen}  [ VPN${SLOT} ] Reset complete - resuming monitor...${CClear}\n"
+    printf "\r\033[2K${CGreen}  [ VPN${SLOT} ] Reset complete -- resuming monitor...${CClear}\n"
     sleep 1
 
     update_status_file
@@ -1011,138 +1013,19 @@ reset_slot_connection () {
     update_slot_city "$SLOT" &
 }
 
-# -------------------------------------------------------------------------------------------------------------------------
-# Preparebar and Progressbar is a script that provides a nice progressbar to show script activity
-
-preparebar()
-{
-  barlen=$1
-  barspaces=$(printf "%*s" "$1")
-  barchars=$(printf "%*s" "$1" | tr ' ' "$2")
-}
-
-# Read exactly one visible menu command followed by Enter.
-readmenucommand()
-{
-  key_press=""
-  menu_line_submitted=0
-  ttydev="$(tty 2>/dev/null)"
-
-  if [ -z "$ttydev" ] || [ "$ttydev" = "not a tty" ]; then
-    return 1
-  fi
-
-  if IFS= read -r -t 1 key_press < "$ttydev"; then
-    menu_line_submitted=1
-    [ "${#key_press}" -eq 1 ]
-    return $?
-  fi
-
-  key_press=""
-  return 1
-}
-
-# Keep the status and the editable command prompt on the same line.
-drawprogressprompt()
-{
-  local status_text="$1"
-  local input_text="$2"
-
-  laststatustext="$status_text"
-  lastinputtext="$input_text"
-
-  if [ "$progresspromptactive" -ne 1 ]; then
-    printf "\033[2K\r%b %s\033[2D" "$status_text" "$input_text"
-    progresspromptactive=1
-  else
-    # Save the current input cursor, redraw the fixed-width status field, then restore it.
-    printf "\033[s\r%b\033[u" "$status_text"
-  fi
-}
-
-resetinvalidprogressinput()
-{
-  # A complete line was submitted, but it was not exactly one command character.
-  printf "\033[1A\33[2K\r%b %s\033[2D" "$laststatustext" "$lastinputtext"
-}
-
-# Remove characters typed or pasted while an interactive command owned the terminal.
-drainpendingttyinput()
-{
-  local ttydev discarded_input
-
-  ttydev="$(tty 2>/dev/null)"
-  if [ -z "$ttydev" ] || [ "$ttydev" = "not a tty" ]; then
-    return 0
-  fi
-
-  # Read one character at a time so this also clears a partial pasted line that
-  # has not yet received Enter. The final one-second timeout confirms the queue is empty.
-  while IFS= read -r -n 1 -t 1 discarded_input < "$ttydev"; do
-    :
-  done
-}
-
-# Draw the countdown/progress prompt for the main display loop and dispatch a
-# key+Enter command if one is submitted.
-progressbaroverride()
-{
-  [ "$1" -eq 1 ] && progresspromptactive=0
-
-  if [ "$1" -eq -1 ]; then
-    printf "\r  $barspaces\r"
-  else
-    if [ -n "$7" ] && [ "$1" -ge "$7" ]; then
-      barch=$(($7*barlen/$2))
-      barsp=$((barlen-barch))
-      progr=$((100*$1/$2))
-    else
-      barch=$(($1*barlen/$2))
-      barsp=$((barlen-barch))
-      progr=$((100*$1/$2))
-    fi
-
-    if [ -n "$6" ]; then AltNum=$6; else AltNum=$1; fi
-
-    if [ "$5" = "Standard" ]; then
-      # Zero-pad the timer and percent to a fixed digit width (based on the configured
-      # timerloop) so the status field is always the same length across redraws.
-      tlwidth=${#2}
-      AltNumPadded=$(printf "%0${tlwidth}d" "$AltNum")
-      progrPadded=$(printf "%03d" "$progr")
-      drawprogressprompt "${InvGreen} ${CClear} ${CWhite}${InvDkGray}${AltNumPadded}${4} / ${progrPadded}%${CClear} [${CGreen}e${CClear}=Exit]${CClear}" "[Key+Enter?  ]"
-    fi
-  fi
-
-  # Require one command character followed by Enter. Pasted text is ignored.
-  if readmenucommand; then
-      progresspromptactive=0
-      echo ""
-      case $key_press in
-          [Ss]) SHOW_OPS=1; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Hh]) SHOW_OPS=0; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Cc]) stty_normal; setup_menu; load_config; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Rr]) health_check_all; update_status_file; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Ll]) display_full_log; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Aa]) autostart; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [Ee]|[Qq]) DISPLAY_EXIT=1; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          '!') reset_slot_connection 1; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          '@') reset_slot_connection 2; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          '#') reset_slot_connection 3; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          '$') reset_slot_connection 4; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          '%') reset_slot_connection 5; KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          [1-5])
-              if echo "$STUNMON_MANAGED_SLOTS" | grep -qw "$key_press"; then
-                  [ "$DETAIL_SLOT" = "$key_press" ] && DETAIL_SLOT="" || DETAIL_SLOT="$key_press"
-              fi
-              KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-          *) KEY_ACTION_TAKEN=1; timer=$timerloop ;;
-      esac
-  elif [ "$menu_line_submitted" -eq 1 ]; then
-      # Enter was pressed but the line wasn't exactly one command character (e.g. paste).
-      KEY_ACTION_TAKEN=1
-      resetinvalidprogressinput
-  fi
+# Read a single keypress immediately in the main display loop
+read_key_nowait () {
+    local TIMEOUT="${1:-30}" KEY="" I=0
+    local STTY_SAVE; STTY_SAVE=$(stty -g 2>/dev/null)
+    stty -echo -icanon min 0 time 0 2>/dev/null
+    while [ "$I" -lt "$TIMEOUT" ]; do
+        KEY=$(dd if=/dev/tty bs=1 count=1 2>/dev/null | tr -d "\000")
+        [ -n "$KEY" ] && break
+        sleep 1
+        I=$((I+1))
+    done
+    stty "$STTY_SAVE" 2>/dev/null
+    echo "$KEY"
 }
 
 _SEP="-------|-------------|-----------|------------------------|---------|------|----------------------------------"
@@ -1284,7 +1167,7 @@ draw_log_tail () {
 }
 
 # ============================================================================================================================
-# Section 10 - Main monitoring display
+# Section 10 -- Main monitoring display
 # ============================================================================================================================
 
 display_main () {
@@ -1292,10 +1175,6 @@ display_main () {
     local SHOW_OPS=0
     local SLOT_COUNT; SLOT_COUNT=$(echo "$STUNMON_MANAGED_SLOTS" | wc -w)
     [ "$SLOT_COUNT" = "1" ] && DETAIL_SLOT="$STUNMON_MANAGED_SLOTS"
-
-    # State for the countdown/command prompt (progressbaroverride / drawprogressprompt)
-    resettimer=0
-    progresspromptactive=0
 
     # Kick off immediate city lookups so the column is populated on first render.
     for _INIT_S in $STUNMON_MANAGED_SLOTS; do
@@ -1367,36 +1246,50 @@ display_main () {
         # Log tail
         draw_log_tail 5
 
-        # Countdown counter + key+Enter command prompt, redrawn in place each second
-        # (no full-line reprint) so the timer no longer flickers.
-        timerloop="$STUNMON_DISPLAY_REFRESH"
-        DISPLAY_EXIT=0
-        KEY_ACTION_TAKEN=0
-        if [ "$resettimer" = "0" ]; then
-            timer=0
-            while [ "$timer" -ne "$timerloop" ]; do
-                timer=$((timer+1))
-                preparebar 46 "|"
-                progressbaroverride "$timer" "$timerloop" "" "s" "Standard"
-                [ "$resettimer" = "1" ] && timer=$timerloop
-            done
-        fi
-        resettimer=0
-        drainpendingttyinput
-        echo ""
+        # Countdown counter + inline keypress polling
+        local KEY="" _CT=1 _FIRST_CTR=1
+        local _SAVE_TTY; _SAVE_TTY=$(stty -g 2>/dev/null)
+        stty -echo -icanon min 0 time 0 2>/dev/null
+        while [ "$_CT" -le "$STUNMON_DISPLAY_REFRESH" ]; do
+            local _PCT; _PCT=$(awk -v ct="$_CT" -v tot="$STUNMON_DISPLAY_REFRESH" 'BEGIN{printf "%.1f", ct * 100.0 / tot}')
+            # On all iterations after the first: move cursor up one line and clear it
+            [ "$_FIRST_CTR" = "0" ] && printf "\033[1A\033[2K"
+            printf "${InvGreen} ${CClear} ${InvDkGray}${CWhite}%3ds /%5s%%${CClear} [${CGreen}e${CClear}=Exit] [Selection? ${InvGreen} ${CClear}]\n" "$_CT" "$_PCT"
+            _FIRST_CTR=0
+            KEY=$(dd if=/dev/tty bs=1 count=1 2>/dev/null | tr -d "\000")
+            [ -n "$KEY" ] && break
+            sleep 1
+            _CT=$((_CT + 1))
+        done
+        printf "\033[1A\033[2K"   # clear the counter line before next screen draw
+        stty "$_SAVE_TTY" 2>/dev/null
 
-        [ "$DISPLAY_EXIT" = "1" ] && break   # e=Exit and q=Quit both terminate the display loop
-
-        if [ "$KEY_ACTION_TAKEN" = "0" ]; then
-            # True timeout: no key+Enter was submitted all cycle - run automatic health check
-            # (primary resilience mechanism).
-            health_check_all
-        fi
+        case "$KEY" in
+            s|S) SHOW_OPS=1 ;;
+            h|H) SHOW_OPS=0 ;;
+            c|C) stty_normal; setup_menu; load_config ;;
+            r|R) health_check_all; update_status_file ;;
+            l|L) display_full_log ;;
+            a|A) autostart ;;
+            e|E|q|Q) break ;;   # e=Exit and q=Quit both terminate the display loop
+            '!') reset_slot_connection 1 ;;
+            '@') reset_slot_connection 2 ;;
+            '#') reset_slot_connection 3 ;;
+            '$') reset_slot_connection 4 ;;
+            '%') reset_slot_connection 5 ;;
+            [1-5])
+                if echo "$STUNMON_MANAGED_SLOTS" | grep -qw "$KEY"; then
+                    [ "$DETAIL_SLOT" = "$KEY" ] && DETAIL_SLOT="" || DETAIL_SLOT="$KEY"
+                fi ;;
+            '')
+                # Timeout: run automatic health check (primary resilience mechanism)
+                health_check_all ;;
+        esac
     done
 }
 
 # ============================================================================================================================
-# Section 11 - Setup menu
+# Section 11 -- Setup menu
 # ============================================================================================================================
 
 # Global variable used by pick_file to return a path without stdout capture
@@ -1432,7 +1325,7 @@ pick_file () {
     echo -e "${CClear}"
 
     if [ "$_TOTAL" -gt 0 ]; then
-        # Display numbered list - loop reads from FILE not a pipe, so N increments
+        # Display numbered list -- loop reads from FILE not a pipe, so N increments
         local N=1
         while IFS= read -r _F; do
             echo -e "${CClear}   (${N}) ${CGreen}${_F}${CClear}"
@@ -1484,7 +1377,7 @@ pick_file () {
     fi
 }
 
-# getkey: read exactly one character immediately - no Enter needed, no echo.
+# getkey: read exactly one character immediately -- no Enter needed, no echo.
 getkey () {
     local _K=""
     local _SAVE; _SAVE=$(stty -g 2>/dev/null)
@@ -1499,7 +1392,7 @@ stty_normal () {
     stty echo icanon 2>/dev/null
 }
 
-# yesno: single-keypress y/n - no Enter required. Echoes key back.
+# yesno: single-keypress y/n -- no Enter required. Echoes key back.
 yesno () {
     local CURRENT="$1"
     local DISPLAY; [ "$CURRENT" = "1" ] && DISPLAY="Yes" || DISPLAY="No"
@@ -1525,7 +1418,7 @@ promptyn () {   # No defaults, just y or n
   done
 }
 
-# inp: text prompt - returns typed value or current on Enter.
+# inp: text prompt -- returns typed value or current on Enter.
 inp () {
     local LABEL="$1" CURRENT="$2"
     stty_normal
@@ -1536,7 +1429,7 @@ inp () {
 }
 
 # ============================================================================================================================
-# Section 11a - Per-slot setup screen
+# Section 11a -- Per-slot setup screen
 # ============================================================================================================================
 
 setup_slot () {
@@ -1657,8 +1550,9 @@ setup_slot () {
     done
 }
 
+
 # ============================================================================================================================
-# Section 11b - Validate slot
+# Section 11b -- Validate slot
 # ============================================================================================================================
 
 setup_validate () {
@@ -1666,13 +1560,13 @@ setup_validate () {
     local OK=1
 
     clear
-    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} - Slot ${SLOT} Validation                                               ${CClear}"
+    echo -e "${InvGreen} ${InvDkGray}${CWhite} stunmon v${Version} -- Slot ${SLOT} Validation                                               ${CClear}"
     echo -e "${InvGreen} ${CClear}"
 
     # stunnel binary
     if [ -n "$STUNNEL_BIN" ]; then
         local _SVER; _SVER=$("$STUNNEL_BIN" -version 2>&1 | sed -n '2p')
-        echo -e "${InvGreen} ${CClear}   ${CGreen}[OK]${CClear}  stunnel binary : ${STUNNEL_BIN} - ${_SVER}"
+        echo -e "${InvGreen} ${CClear}   ${CGreen}[OK]${CClear}  stunnel binary : ${STUNNEL_BIN} -- ${_SVER}"
     else
         echo -e "${InvGreen} ${CClear}   ${CRed}[!!]${CClear}  stunnel not found. Install via: opkg install stunnel"
         OK=0
@@ -1683,7 +1577,7 @@ setup_validate () {
     if [ -f "$SSLF" ]; then
         echo -e "${InvGreen} ${CClear}   ${CGreen}[OK]${CClear}  SSL config     : ${SSLF}"
     else
-        echo -e "${InvGreen} ${CClear}   ${CRed}[!!]${CClear}  SSL config not found: ${SSLF:-"(not set - use option 3)"}"
+        echo -e "${InvGreen} ${CClear}   ${CRed}[!!]${CClear}  SSL config not found: ${SSLF:-"(not set -- use option 3)"}"
         OK=0
     fi
 
@@ -1696,7 +1590,7 @@ setup_validate () {
                 sed 's/.*CN *= */CN=/' | cut -d, -f1 | cut -d/ -f1)
         echo -e "${InvGreen} ${CClear}   ${CGreen}[OK]${CClear}  CA certificate : ${_SUBJ:-${CERTF}}"
     else
-        echo -e "${InvGreen} ${CClear}   ${CRed}[!!]${CClear}  CA certificate not found or invalid: ${CERTF:-"(not set - use option 4)"}"
+        echo -e "${InvGreen} ${CClear}   ${CRed}[!!]${CClear}  CA certificate not found or invalid: ${CERTF:-"(not set -- use option 4)"}"
         OK=0
     fi
 
@@ -1744,7 +1638,7 @@ setup_validate () {
 }
 
 # ============================================================================================================================
-# Section 11c - Main setup menu
+# Section 11c -- Main setup menu
 # ============================================================================================================================
 
 setup_menu () {
@@ -1977,7 +1871,7 @@ ScriptUpdateFromAMTM () {
 
     # Force a STUNMON download and update
     echo ""
-    echo -e "${InvGreen} ${CClear} Downloading latest ${CGreen}STUNMON${CClear}... Please stand by while we enhance your online safety & security..."
+    echo -e "${InvGreen} ${CClear} Downloading latest ${CGreen}STUNMON${CClear}... Please stand by while we increase your online safety & security..."
     curl --silent --fail --retry 3 "https://raw.githubusercontent.com/ViktorJp/STUNMON/main/stunmon.sh" -o "/jffs/scripts/stunmon.sh" && chmod 755 "/jffs/scripts/stunmon.sh"
     DLsuccess=$?
     if [ "$DLsuccess" -eq 0 ]; then
@@ -2125,7 +2019,7 @@ done
 }
 
 # ============================================================================================================================
-# Section 11d - Add/remove slot helpers
+# Section 11d -- Add/remove slot helpers
 # ============================================================================================================================
 
 setup_new_slot () {
@@ -2236,7 +2130,7 @@ setup_global () {
 }
 
 # ============================================================================================================================
-# Section 12 - First-run wizard
+# Section 12 -- First-run wizard
 # ============================================================================================================================
 
 first_run_wizard () {
@@ -2453,7 +2347,7 @@ first_run_wizard () {
     clear
     echo -e "${InvGreen} ${InvDkGray}${CWhite} STUNMON  |  Step 4 of 4: Optional Settings                                          ${CClear}"
     echo -e "${InvGreen} ${CClear}"
-    echo -e "${InvGreen} ${CClear} SNI Hostname (optional - leave blank to skip):${CClear}"
+    echo -e "${InvGreen} ${CClear} SNI Hostname (optional -- leave blank to skip):${CClear}"
     echo -e "${InvGreen} ${CClear}"
     echo -e "${InvGreen} ${CClear}   When set, stunmon sends this hostname in the TLS ClientHello SNI field.${CClear}"
     echo -e "${InvGreen} ${CClear}   To a DPI system it looks like traffic to a legitimate service.${CClear}"
@@ -2536,7 +2430,7 @@ first_run_wizard () {
     sleep 3
 }
 
-# Section 13 - Main dispatch
+# Section 13 -- Main dispatch
 # ============================================================================================================================
 
 main () {
@@ -2631,7 +2525,8 @@ main () {
             ;;
 
         -check|--check)
-            # Single health check cycle intended for cron
+            # Single health check cycle -- intended for cron
+            # Example crontab: */1 * * * * /jffs/scripts/stunmon.sh -check
             health_check_all
             trimlogs
             ;;
@@ -2656,7 +2551,7 @@ main () {
 
         -h|--help|-help)
             echo ""
-            echo -e "${CWhite}STUNMON v${Version} - stunnel Connection Manager${CClear}"
+            echo -e "${CWhite}STUNMON v${Version} -- stunnel Connection Manager${CClear}"
             echo ""
             echo "Usage:  stunmon.sh [command] [slot]"
             echo ""
@@ -2729,7 +2624,7 @@ main () {
             ;;
 			  
         "")
-            # Interactive display - first-run wizard if not configured
+            # Interactive display -- first-run wizard if not configured
             if [ -z "$STUNMON_MANAGED_SLOTS" ]; then
                 first_run_wizard
                 load_config

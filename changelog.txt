@@ -1,4 +1,8 @@
-v0.3.0      - PATCH: Added reboot protection capabilities, adding an entry into the POST-MOUNT so that STUNMON will
+v0.4.0      - MINOR: Borrowed @ExtremeFiretop's "key+enter" implementation for the countdown timer that was used in
+              the latest version of TAILMON. Makes for a much nicer experience.
+            - PATCH: Minor fixes, enhancements, and cleanup.
+
+v0.3.0      - MINOR: Added reboot protection capabilities, adding an entry into the POST-MOUNT so that STUNMON will
               continue operating after a router reboot. This functionality is available via the (S)how Operations
               Menu using the "A" key.
 
